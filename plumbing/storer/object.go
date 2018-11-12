@@ -97,6 +97,11 @@ type PackfileWriter interface {
 	PackfileWriter() (io.WriteCloser, error)
 }
 
+type ThinPackfileWriter interface {
+	// ThinPackfileWriter returns a writer for writing a thin packfile to the storage
+	ThinPackfileWriter() (io.WriteCloser, error)
+}
+
 // EncodedObjectIter is a generic closable interface for iterating over objects.
 type EncodedObjectIter interface {
 	Next() (plumbing.EncodedObject, error)

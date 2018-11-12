@@ -9,6 +9,7 @@ import (
 	"gopkg.in/src-d/go-git.v4/plumbing/format/idxfile"
 	"gopkg.in/src-d/go-git.v4/plumbing/format/objfile"
 	"gopkg.in/src-d/go-git.v4/plumbing/format/packfile"
+	"gopkg.in/src-d/go-git.v4/plumbing/storer"
 
 	"gopkg.in/src-d/go-billy.v4"
 )
@@ -29,6 +30,7 @@ type PackWriter struct {
 	parser   *packfile.Parser
 	writer   *idxfile.Writer
 	result   chan error
+	storer   storer.EncodedObjectStorer
 }
 
 func newPackWrite(fs billy.Filesystem) (*PackWriter, error) {
@@ -54,11 +56,26 @@ func newPackWrite(fs billy.Filesystem) (*PackWriter, error) {
 	return writer, nil
 }
 
+// Returns a PackWriter that considers the referenced EncodedObjectStorer
+// for parsing a thin pack file
+func newThinPackWriter(fs billy.Filesystem, storer storer.EncodedObjectStorer) (*PackWriter, error) {
+	writer, err := newPackWrite(fs)
+	if err != nil {
+		return nil, err
+	}
+	writer.storer = storer
+	return writer, nil
+}
+
 func (w *PackWriter) buildIndex() {
 	s := packfile.NewScanner(w.synced)
 	w.writer = new(idxfile.Writer)
 	var err error
-	w.parser, err = packfile.NewParser(s, w.writer)
+	if w.storer == nil {
+		w.parser, err = packfile.NewParser(s, w.writer)
+	} else {
+		w.parser, err = packfile.NewParserWithStorage(s, w.storer, w.writer)
+	}
 	if err != nil {
 		w.result <- err
 		return

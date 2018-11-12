@@ -14,6 +14,7 @@ import (
 
 	"gopkg.in/src-d/go-billy.v4/osfs"
 	"gopkg.in/src-d/go-git.v4/plumbing"
+	"gopkg.in/src-d/go-git.v4/plumbing/storer"
 	"gopkg.in/src-d/go-git.v4/utils/ioutil"
 
 	"gopkg.in/src-d/go-billy.v4"
@@ -189,11 +190,20 @@ func (d *DotGit) Shallow() (billy.File, error) {
 	return f, nil
 }
 
-// NewObjectPack return a writer for a new packfile, it saves the packfile to
+// NewObjectPack returns a writer for a new packfile, it saves the packfile to
 // disk and also generates and save the index for the given packfile.
 func (d *DotGit) NewObjectPack() (*PackWriter, error) {
 	d.cleanPackList()
 	return newPackWrite(d.fs)
+}
+
+// NewThinObjectPack returns a writer for a new packfile will be written out of
+// a thin pack and checks its dependencies are met by the given storer. It saves the packfile to
+// disk and also generates and save the index for the given packfile.
+// storer is an EncodedObjectStorer used to check external references for indexing
+func (d *DotGit) NewThinObjectPack(storer storer.EncodedObjectStorer) (*PackWriter, error) {
+	d.cleanPackList()
+	return newThinPackWriter(d.fs, storer)
 }
 
 // ObjectPacks returns the list of availables packfiles

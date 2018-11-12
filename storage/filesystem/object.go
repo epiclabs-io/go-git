@@ -83,12 +83,16 @@ func (s *ObjectStorage) NewEncodedObject() plumbing.EncodedObject {
 	return &plumbing.MemoryObject{}
 }
 
-func (s *ObjectStorage) PackfileWriter() (io.WriteCloser, error) {
+func (s *ObjectStorage) packfileWriter(thin bool) (w *dotgit.PackWriter, err error) {
 	if err := s.requireIndex(); err != nil {
 		return nil, err
 	}
 
-	w, err := s.dir.NewObjectPack()
+	if thin {
+		w, err = s.dir.NewThinObjectPack(s)
+	} else {
+		w, err = s.dir.NewObjectPack()
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -101,6 +105,14 @@ func (s *ObjectStorage) PackfileWriter() (io.WriteCloser, error) {
 	}
 
 	return w, nil
+}
+
+func (s *ObjectStorage) PackfileWriter() (io.WriteCloser, error) {
+	return s.packfileWriter(false)
+}
+
+func (s *ObjectStorage) ThinPackfileWriter() (io.WriteCloser, error) {
+	return s.packfileWriter(true)
 }
 
 // SetEncodedObject adds a new object to the storage.
